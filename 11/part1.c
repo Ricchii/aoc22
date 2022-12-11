@@ -1,0 +1,147 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+struct iteml {
+	long l;
+	struct iteml* next;
+};
+
+struct monkey {
+	struct iteml* items;
+	char op;
+	long opn;
+	long testn;
+	int tmn;
+	int fmn;
+};
+
+void appendI (struct iteml** head, int n) {
+	struct iteml* i = *head;
+	if (i == NULL) {
+		*head = malloc(sizeof(struct iteml));
+		(*head)->l = n;
+		(*head)->next = NULL;
+	} else {
+		while (i->next != NULL) {
+			i = i->next;
+		}
+		struct iteml* nitem = malloc(sizeof(struct iteml));
+		nitem->l = n;
+		nitem->next = NULL;
+		i->next = nitem;
+	}
+}
+
+struct monkey* parse() {
+	char l[100];
+	fgets(l, 100, stdin);
+	if (l[0]=='\n') {fgets(l, 100, stdin);}//l = Monkey N
+	fgets(l, 100, stdin); //l = Startin...
+	int nns = 1;
+	for (int i=0;l[i]!='\0';i++) {
+		if (l[i] == ',') {nns++;}
+	}
+	struct monkey* m = malloc(sizeof(struct monkey));
+	//item list
+	struct iteml* head = malloc(sizeof(struct iteml));
+	head->next = NULL;
+	sscanf(&l[18], "%ld", &(head->l));
+	long n;
+	for (int i=1;i<nns;i++) {
+		sscanf(&l[18+(4*i)], "%ld", &n);
+		appendI(&head, n);
+	}
+	m->items = head;
+	//operation
+	fgets(l, 100, stdin); //l = Oper...
+	char opn[5];
+	sscanf(l, "  Operation: new = old %c %s", &(m->op), opn);
+	if (opn[0]=='o') {
+		m->opn = 0;
+	} else {
+		sscanf(opn, "%ld", &(m->opn));
+	}
+	//test
+	fgets(l, 100, stdin); //l = Test:...
+	sscanf(l, "  Test: divisible by %ld", &(m->testn));
+	fgets(l, 100, stdin); //l = If tru...
+	sscanf(l, "    If true: throw to monkey %d", &(m->tmn));
+	fgets(l, 100, stdin);
+	sscanf(l, "    If false: throw to monkey %d", &(m->fmn));
+
+	return m;
+}
+
+int popI(struct iteml** itemp) {
+	if (*itemp != NULL) {
+		long item = (*itemp)->l;
+		struct iteml* di = *itemp;
+		*itemp = di->next;
+		free(di);
+		return item;
+	} else {
+		return -1;
+	}
+}
+
+struct monkey** monkeys;
+int* inspects;
+
+void throwshit(struct monkey* monkey, int mn) {
+	long item;
+	while ((item = popI(&(monkey->items))) != -1) {
+		inspects[mn]++;
+		long opn = monkey->opn;
+		if (opn == 0) {opn = item;}
+		switch (monkey->op) {
+			case '+': item += opn; break;
+			case '*': item *= opn; break;
+		}
+		item /= 3;
+		if (item % monkey->testn == 0) {
+			appendI(&monkeys[monkey->tmn]->items, item);
+		} else {
+			appendI(&monkeys[monkey->fmn]->items, item);
+		}
+	}
+}
+
+int main() {
+	int nmonks = 8;
+	monkeys = malloc(sizeof(struct monkey*) * nmonks);
+	inspects = malloc(sizeof(int) * nmonks);
+	for (int i=0;i<nmonks; i++) {
+		monkeys[i] = parse();
+	}
+
+	for (int i=0;i<nmonks;i++) {
+		struct iteml* item = monkeys[i]->items;
+		while (item != NULL) {
+			printf("%ld, ", item->l);
+			item = item->next;
+		} puts("");
+
+		printf("old %c %ld\n", monkeys[i]->op, monkeys[i]->opn);
+	}
+	
+	for (int rounds=20; rounds>0; rounds--) {
+		for (int i=0; i<nmonks; i++) {
+			throwshit(monkeys[i], i);
+		}
+	}
+	puts("finished shit slinging");
+	for (int i=0;i<nmonks; i++) {
+		struct monkey* m = monkeys[i];
+		struct iteml* item = m->items;
+		while (item != NULL) {
+			printf("%ld, ", item->l);
+			item = item->next;
+		}
+		puts("");
+	}
+	for (int i=0;i<nmonks;i++) {
+		printf("%d\n", inspects[i]);
+	}
+
+}
